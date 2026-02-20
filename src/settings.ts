@@ -1,5 +1,10 @@
 export type ApiStyle = "responses" | "chat_completions";
 export type AiBackend = "codex_cli" | "openai_api";
+export type CodexThreadMode = "new" | "last" | "specific";
+export interface CodexThreadPreference {
+  mode: CodexThreadMode;
+  threadId: string;
+}
 
 export interface ObsidianAiPluginSettings {
   aiBackend: AiBackend;
@@ -7,6 +12,9 @@ export interface ObsidianAiPluginSettings {
   apiBaseUrl: string;
   apiStyle: ApiStyle;
   codexCommand: string;
+  codexThreadMode: CodexThreadMode;
+  codexThreadId: string;
+  codexThreadOverrides: Record<string, CodexThreadPreference>;
   model: string;
   temperature: number;
   requestTimeoutMs: number;
@@ -19,6 +27,9 @@ export const DEFAULT_SETTINGS: ObsidianAiPluginSettings = {
   apiBaseUrl: "https://api.openai.com/v1",
   apiStyle: "responses",
   codexCommand: "codex",
+  codexThreadMode: "new",
+  codexThreadId: "",
+  codexThreadOverrides: {},
   model: "gpt-5-codex",
   temperature: 0.2,
   requestTimeoutMs: 60000,

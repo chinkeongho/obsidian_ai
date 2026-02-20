@@ -1,9 +1,11 @@
 import { App, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { closeAskEditPanel, registerAskEditPanelModule } from "./modules/ask-edit-panel";
 import { registerWritingImproverModule } from "./modules/writing-improver";
 import {
   DEFAULT_SETTINGS,
   type AiBackend,
   type ApiStyle,
+  type CodexThreadMode,
   type ObsidianAiPluginSettings
 } from "./settings";
 
@@ -15,10 +17,13 @@ export default class ObsidianAiPlugin extends Plugin {
 
     this.registerCodexSetupCommand();
     registerWritingImproverModule(this);
+    registerAskEditPanelModule(this);
     this.addSettingTab(new ObsidianAiSettingTab(this.app, this));
   }
 
-  onunload(): void {}
+  async onunload(): Promise<void> {
+    await closeAskEditPanel(this);
+  }
 
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -102,6 +107,34 @@ class ObsidianAiSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.codexCommand)
           .onChange(async (value) => {
             this.plugin.settings.codexCommand = value.trim() || DEFAULT_SETTINGS.codexCommand;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Codex thread mode")
+      .setDesc("Choose whether each run starts a new thread, resumes last, or resumes a specific thread ID.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("new", "new thread each run")
+          .addOption("last", "resume last thread")
+          .addOption("specific", "resume specific thread ID")
+          .setValue(this.plugin.settings.codexThreadMode)
+          .onChange(async (value) => {
+            this.plugin.settings.codexThreadMode = value as CodexThreadMode;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Codex thread ID")
+      .setDesc("Used only when thread mode is 'resume specific thread ID'.")
+      .addText((text) =>
+        text
+          .setPlaceholder("019c78da-2b9f-7841-8814-8185befe42af")
+          .setValue(this.plugin.settings.codexThreadId)
+          .onChange(async (value) => {
+            this.plugin.settings.codexThreadId = value.trim();
             await this.plugin.saveSettings();
           })
       );

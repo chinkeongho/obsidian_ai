@@ -3,6 +3,9 @@ import type { ObsidianAiPluginSettings } from "../settings";
 export interface ImproveWritingInput {
   text: string;
   systemPrompt: string;
+  codexThreadMode?: ObsidianAiPluginSettings["codexThreadMode"];
+  codexThreadId?: string;
+  onPartialText?: (text: string) => void;
 }
 
 export class AiClient {
@@ -45,13 +48,63 @@ export class AiClient {
       input.text
     ].join("\n");
 
-    const args = ["exec", "--skip-git-repo-check", "-m", this.settings.model, prompt];
-    const result = await this.spawnCommand(args, this.settings.requestTimeoutMs);
+    const args = this.buildCodexExecArgs(
+      prompt,
+      input.codexThreadMode,
+      input.codexThreadId
+    );
+    let liveText = "";
+    const result = await this.spawnCommand(
+      args,
+      this.settings.requestTimeoutMs,
+      (chunk) => {
+        liveText += chunk;
+        input.onPartialText?.(liveText);
+      }
+    );
     const output = result.trim();
     if (!output) {
       throw new Error("Codex CLI returned no text.");
     }
     return output;
+  }
+
+  private buildCodexExecArgs(
+    prompt: string,
+    modeOverride?: ObsidianAiPluginSettings["codexThreadMode"],
+    threadIdOverride?: string
+  ): string[] {
+    const mode = modeOverride ?? this.settings.codexThreadMode;
+
+    if (mode === "last") {
+      return [
+        "exec",
+        "resume",
+        "--last",
+        "--skip-git-repo-check",
+        "-m",
+        this.settings.model,
+        prompt
+      ];
+    }
+
+    if (mode === "specific") {
+      const threadId = (threadIdOverride ?? this.settings.codexThreadId).trim();
+      if (!threadId) {
+        throw new Error("Codex thread mode is 'specific' but no thread ID is configured.");
+      }
+      return [
+        "exec",
+        "resume",
+        threadId,
+        "--skip-git-repo-check",
+        "-m",
+        this.settings.model,
+        prompt
+      ];
+    }
+
+    return ["exec", "--skip-git-repo-check", "-m", this.settings.model, prompt];
   }
 
   private async improveWithResponses(input: ImproveWritingInput): Promise<string> {
@@ -188,7 +241,11 @@ export class AiClient {
     }
   }
 
-  private async spawnCommand(args: string[], timeoutMs: number): Promise<string> {
+  private async spawnCommand(
+    args: string[],
+    timeoutMs: number,
+    onStdoutChunk?: (chunk: string) => void
+  ): Promise<string> {
     if (!(window as Window & { require?: (id: string) => unknown }).require) {
       throw new Error("Codex CLI is available only in Obsidian desktop.");
     }
@@ -231,7 +288,9 @@ export class AiClient {
       }, timeoutMs);
 
       child.stdout?.on("data", (chunk) => {
-        stdout += String(chunk);
+        const text = String(chunk);
+        stdout += text;
+        onStdoutChunk?.(text);
       });
       child.stderr?.on("data", (chunk) => {
         stderr += String(chunk);
