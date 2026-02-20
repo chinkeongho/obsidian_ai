@@ -1,0 +1,11 @@
+{
+  "aiBackend": "codex_cli",
+  "apiKey": "",
+  "apiBaseUrl": "https://api.openai.com/v1",
+  "apiStyle": "responses",
+  "codexCommand": "/opt/homebrew/bin/codex",
+  "model": "gpt-5-codex",
+  "temperature": 0.2,
+  "requestTimeoutMs": 60000,
+  "writingSystemPrompt": "You are an expert writing editor. Improve clarity, flow, grammar, and structure while preserving the original meaning and markdown format."
+}

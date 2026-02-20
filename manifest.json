@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-ai-plugin",
+  "name": "Obsidian AI Plugin",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "A starter Obsidian plugin scaffold.",
+  "author": "Your Name",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}
